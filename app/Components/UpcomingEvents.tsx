@@ -11,7 +11,7 @@ async function getData(page: number) {
   const res = await fetch(
     apiURL +
       new URLSearchParams({
-        code: process.env.API_KEY!,
+        code: process.env.NEXT_PUBLIC_API_KEY!,
         page: page.toFixed(0),
         type: "upcoming",
       })
