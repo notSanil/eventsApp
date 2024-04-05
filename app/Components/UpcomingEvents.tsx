@@ -68,7 +68,8 @@ export default function UpcomingEvents() {
             <CircularProgress />
           </div>
         }
-        style={{ height: "75vh", scrollbarWidth: "none" }}
+        style={{scrollbarWidth: "none" }}
+        height={"75vh"}
       >
         <Grid container spacing={3}>
           {data.events.map((value, index) => {
