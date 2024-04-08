@@ -5,8 +5,8 @@ import InfiniteScroll from "react-infinite-scroll-component";
 import UpcomingEventCard from "./UpcomingEventCard";
 import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 import {
-  getCurrentPage,
   getNextPage,
+  getStatus,
   getTotalPages,
   resetEvents,
   selectAllEvents,
@@ -16,8 +16,8 @@ import { useEffect } from "react";
 export default function InfiniteUpcomingEvents() {
   const events = useAppSelector(selectAllEvents);
   const totalEvents = useAppSelector(getTotalPages);
-  const page = useAppSelector(getCurrentPage);
   const hasMore = events.length < totalEvents;
+  const status = useAppSelector(getStatus);
 
   const dispatch = useAppDispatch();
   async function loadNextBatch() {
@@ -25,7 +25,9 @@ export default function InfiniteUpcomingEvents() {
   }
 
   useEffect(() => {
-    loadNextBatch();
+    if (status === "idle") {
+      dispatch(getNextPage());
+    }
   }, [dispatch]);
 
   function extractIdFromUrl(url: string): string | null {

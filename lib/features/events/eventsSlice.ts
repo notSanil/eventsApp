@@ -3,6 +3,7 @@ import {
   PayloadAction,
   ThunkAction,
   UnknownAction,
+  createAsyncThunk,
   createSlice,
 } from "@reduxjs/toolkit";
 
@@ -30,53 +31,58 @@ export const eventsSlice = createSlice({
     totalEventsChanged: (state, action: PayloadAction<number>) => {
       state.totalEvents = action.payload;
     },
-    incrementPage: (state) => {
-      state.page += 1;
-    },
-    decrementPage: (state) => {
-      --state.page;
-    },
-    resetEvents: (state) => {
+    resetEvents: () => {
       return initialState;
     },
   },
+  extraReducers(builder) {
+    builder
+      .addCase(getNextPage.pending, (state) => {
+        state.status = "loading";
+        state.page += 1;
+      })
+      .addCase(getNextPage.fulfilled, (state, action) => {
+        state.status = "success";
+        state.events = state.events.concat(action.payload.events);
+        state.totalEvents = action.payload.totalEvents;
+      })
+      .addCase(getNextPage.rejected, (state, action) => {
+        state.status = "failed";
+        state.page -= 1;
+        console.log(action.error.message);
+      });
+  },
 });
 
-export const {
-  eventsAdded,
-  totalEventsChanged,
-  incrementPage,
-  resetEvents,
-  decrementPage,
-} = eventsSlice.actions;
+export const { eventsAdded, totalEventsChanged, resetEvents } =
+  eventsSlice.actions;
 
 export default eventsSlice.reducer;
 
 export const selectAllEvents = (state: RootState) => state.events.events;
 export const getTotalPages = (state: RootState) => state.events.totalEvents;
 export const getCurrentPage = (state: RootState) => state.events.page;
+export const getStatus = (state: RootState) => state.events.status;
 
 const apiURL = "https://gg-backend-assignment.azurewebsites.net/api/Events?";
-export const getNextPage =
-  (): ThunkAction<void, RootState, unknown, UnknownAction> =>
-  async (dispatch, getState) => {
-    const page = getState().events.page + 1;
-    dispatch(incrementPage());
-    const response = await fetch(
-      apiURL +
-        new URLSearchParams({
-          code: process.env.NEXT_PUBLIC_API_KEY!,
-          page: page.toFixed(0),
-          type: "upcoming",
-        })
-    );
+export const getNextPage = createAsyncThunk<
+  ApiResponse,
+  void,
+  { state: RootState }
+>("events/fetchNextPage", async (_payload, { getState, rejectWithValue }) => {
+  const page = getState().events.page;
+  const response = await fetch(
+    apiURL +
+      new URLSearchParams({
+        code: process.env.NEXT_PUBLIC_API_KEY!,
+        page: page.toFixed(0),
+        type: "upcoming",
+      })
+  );
 
-    if (!response.ok) {
-      dispatch(decrementPage());
-      return;
-    }
+  if (!response.ok) {
+    return rejectWithValue("Failed to fetch data");
+  }
 
-    const data = (await response.json()) as ApiResponse;
-    dispatch(totalEventsChanged(data.totalEvents));
-    dispatch(eventsAdded(data.events));
-  };
+  return (await response.json()) as ApiResponse;
+});
